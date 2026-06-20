@@ -3,10 +3,10 @@
 #include "order.h" 
 #include "../side/side.h"
 
-Order::Order(std::int64_t orderId, std::int64_t quantity, std::int64_t price, std::int64_t sequence, Side side)
+Order::Order(std::uint64_t orderId, std::int64_t quantity, std::int64_t price, std::int64_t sequence, Side side)
     : orderId(orderId), quantity(quantity), remaining(quantity), price(price), sequence(sequence), side(side) {}
 
-std::int64_t Order::getOrderId() const {
+std::uint64_t Order::getOrderId() const {
     return orderId;
 }
 

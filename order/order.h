@@ -5,7 +5,7 @@
 class Order
 {
 private:
-    std::int64_t orderId;
+    std::uint64_t orderId;
     std::int64_t quantity;
     std::int64_t remaining; 
     std::int64_t price;
@@ -13,8 +13,8 @@ private:
     Side side;
 
 public:
-    Order(std::int64_t orderId, std::int64_t quantity, std::int64_t price, std::int64_t sequence, Side side);
-    std::int64_t getOrderId() const;
+    Order(std::uint64_t orderId, std::int64_t quantity, std::int64_t price, std::int64_t sequence, Side side);
+    std::uint64_t getOrderId() const;
     std::int64_t getQuantity() const;
     std::int64_t getRemaining() const;
     std::int64_t getPrice() const;

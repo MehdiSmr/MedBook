@@ -3,8 +3,10 @@
 #include "order.h" 
 #include "../side/side.h"
 
-Order::Order(std::uint64_t orderId, std::int64_t quantity, std::int64_t price, std::int64_t sequence, Side side)
-    : orderId(orderId), quantity(quantity), remaining(quantity), price(price), sequence(sequence), side(side) {}
+Order::Order(std::uint64_t orderId, std::int64_t quantity, std::int64_t price, std::int64_t sequence, 
+        Side side, Order *next, Order *prev, PriceLevel *level)
+    : orderId(orderId), quantity(quantity), remaining(quantity), price(price), sequence(sequence), 
+    side(side), next(next), prev(prev), level(level) {}
 
 std::uint64_t Order::getOrderId() const {
     return orderId;
@@ -36,3 +38,28 @@ void Order::reduceRemaining(std::int64_t amount) {
     }
     remaining -= amount;
 }
+
+Order* Order::getNext() const {
+    return next;
+}
+
+void Order::setNext(Order* nextOrder) {
+    next = nextOrder;
+}
+
+Order* Order::getPrev() const {
+    return prev;
+}
+
+void Order::setPrev(Order* prevOrder) {
+    prev = prevOrder;
+}
+
+PriceLevel* Order::getLevel() const {
+    return level;
+}
+
+void Order::setLevel(PriceLevel* level) {
+    this->level = level;
+}
+

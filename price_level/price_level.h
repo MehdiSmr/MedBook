@@ -14,7 +14,6 @@ private:
 
 public:
     PriceLevel(std::int32_t price);
-    ~PriceLevel(); 
     Order* getHead() const;
     Order* getTail() const;
     PriceLevel* getRightChild() const;

@@ -3,6 +3,8 @@
 
 main
 
+.vibe-wise/
+
 .DS_Store
 # Compiled Object files
 *.slo

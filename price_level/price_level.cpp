@@ -5,11 +5,6 @@
 PriceLevel::PriceLevel(std::int32_t price) : head(nullptr), 
         tail(nullptr), rightChild(nullptr), leftChild(nullptr), depth(0), price(price) {}
 
-
-PriceLevel::~PriceLevel() {
-    // Destructor logic if needed
-}
-
 Order* PriceLevel::getHead() const {
     return head;
 }

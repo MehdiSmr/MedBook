@@ -1,5 +1,4 @@
 #include "order_pool.h"
-#include <iostream>
 #include <numeric>
 
 OrderPool::OrderPool(int size): 
@@ -24,7 +23,6 @@ Order* OrderPool::createOrder(std::uint64_t orderId, std::int32_t quantity, std:
 }
 
 void OrderPool::destroyOrder(Order* order) {
-    //we need to ensure that order is valid 
     if (!order) {
         throw std::invalid_argument("Order pointer is null");
     } else if ( order < reinterpret_cast<Order*>(pool.get()) || 

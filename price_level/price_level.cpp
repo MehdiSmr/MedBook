@@ -2,6 +2,14 @@
 #include <cstdint>
 #include "price_level.h"
 
+PriceLevel::PriceLevel(std::int32_t price) : head(nullptr), 
+        tail(nullptr), rightChild(nullptr), leftChild(nullptr), depth(0), price(price) {}
+
+
+PriceLevel::~PriceLevel() {
+    // Destructor logic if needed
+}
+
 Order* PriceLevel::getHead() const {
     return head;
 }
@@ -14,17 +22,40 @@ std::int64_t PriceLevel::getDepth() const {
     return depth;
 }
 
+std::int32_t PriceLevel::getPrice() const {
+    return price;
+}
+
+PriceLevel* PriceLevel::getRightChild() const {
+    return rightChild;
+}
+
+PriceLevel* PriceLevel::getLeftChild() const {
+    return leftChild;
+}
+
+void PriceLevel::setRightChild(PriceLevel* child) {
+    rightChild = child;
+}
+
+void PriceLevel::setLeftChild(PriceLevel* child) {
+    leftChild = child;
+}
+
 void PriceLevel::addOrder(Order* order) {
     if (!order) {
         throw std::invalid_argument("Order is null");
     }
     if (!head) {
         head = tail = order;
+        order->setPrev(nullptr);
     } else {
         tail->setNext(order);
         order->setPrev(tail);
         tail = order;
     }
+    order->setNext(nullptr);
+    order->setLevel(this);
     depth++;
 }
 
@@ -46,7 +77,9 @@ void PriceLevel::removeOrder(Order* order) {
     } else {
         tail = order->getPrev();
     }
-
+    order->setPrev(nullptr);
+    order->setNext(nullptr);
+    order->setLevel(nullptr);
     depth--;
 }
 

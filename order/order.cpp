@@ -3,28 +3,28 @@
 #include "order.h" 
 #include "../side/side.h"
 
-Order::Order(std::uint64_t orderId, std::int64_t quantity, std::int64_t price, std::int64_t sequence, 
+Order::Order(std::uint64_t orderId, std::int32_t quantity, std::int32_t price, std::uint64_t sequence, 
         Side side, Order *next, Order *prev, PriceLevel *level)
     : orderId(orderId), quantity(quantity), remaining(quantity), price(price), sequence(sequence), 
-    side(side), next(next), prev(prev), level(level) {}
+    next(next), prev(prev), level(level), side(side) {}
 
 std::uint64_t Order::getOrderId() const {
     return orderId;
 }
 
-std::int64_t Order::getQuantity() const {
+std::int32_t Order::getQuantity() const {
     return quantity;
 }
 
-std::int64_t Order::getRemaining() const {
+std::int32_t Order::getRemaining() const {
     return remaining;
 }
 
-std::int64_t Order::getPrice() const {
+std::int32_t Order::getPrice() const {
     return price;
 }
 
-std::int64_t Order::getSequence() const {
+std::uint64_t Order::getSequence() const {
     return sequence;
 }
 
@@ -32,7 +32,7 @@ Side Order::getSide() const {
     return side;
 }
 
-void Order::reduceRemaining(std::int64_t amount) {
+void Order::reduceRemaining(std::int32_t amount) {
     if (amount > remaining) {
         throw std::invalid_argument("Amount to reduce exceeds remaining quantity");
     }

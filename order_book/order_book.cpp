@@ -85,16 +85,16 @@ void OrderBook::RedBlackTree::fixInsert(PriceLevel* z) {
     root->setColor(PriceLevel::Color::BLACK);
 }
 
-void OrderBook::RedBlackTree::transplant(PriceLevel* u, PriceLevel* v) {
-    // Implementation of Red-Black Tree transplant logic goes here
-}
-
 void OrderBook::RedBlackTree::remove(PriceLevel* nodeToRemove) {
     // Implementation of Red-Black Tree removal logic goes here
 }
 
 void OrderBook::RedBlackTree::fixRemove(PriceLevel* x) {
     // Implementation of Red-Black Tree removal fix-up logic goes here
+}
+
+void OrderBook::RedBlackTree::transplant(PriceLevel* u, PriceLevel* v) {
+    // Implementation of Red-Black Tree transplant logic goes here
 }
 
 void OrderBook::RedBlackTree::leftRotate(PriceLevel* x) {

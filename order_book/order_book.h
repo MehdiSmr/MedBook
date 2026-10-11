@@ -13,14 +13,14 @@ public:
         RedBlackTree();
         PriceLevel* insert(std::int32_t price);
         void remove(PriceLevel* nodeToRemove);
-        void leftRotate(PriceLevel* x); 
-        void rightRotate(PriceLevel* y);
         PriceLevel* getRoot() const;
         PriceLevel* getNil() const;
     private:
-        void transplant(PriceLevel* u, PriceLevel* v);
         void fixInsert(PriceLevel* z);
         void fixRemove(PriceLevel* x); 
+        void transplant(PriceLevel* u, PriceLevel* v);
+        void leftRotate(PriceLevel* x); 
+        void rightRotate(PriceLevel* y);
         PriceLevel* nil;
         PriceLevel* root;
     };

@@ -3,7 +3,7 @@
 #include "price_level.h"
 
 PriceLevel::PriceLevel(std::int32_t price) : head(nullptr), 
-        tail(nullptr), rightChild(nullptr), leftChild(nullptr), depth(0), price(price) {}
+        tail(nullptr), color(PriceLevel::Color::RED), parent(nullptr), rightChild(nullptr), leftChild(nullptr), depth(0), price(price) {}
 
 Order* PriceLevel::getHead() const {
     return head;
@@ -11,6 +11,14 @@ Order* PriceLevel::getHead() const {
 
 Order* PriceLevel::getTail() const {
     return tail;
+}
+
+PriceLevel::Color PriceLevel::getColor() const {
+    return color;
+}
+
+void PriceLevel::setColor(Color c) {
+    color = c;
 }
 
 std::int64_t PriceLevel::getDepth() const {
@@ -21,12 +29,20 @@ std::int32_t PriceLevel::getPrice() const {
     return price;
 }
 
+PriceLevel* PriceLevel::getParent() const {
+    return parent;
+}
+
 PriceLevel* PriceLevel::getRightChild() const {
     return rightChild;
 }
 
 PriceLevel* PriceLevel::getLeftChild() const {
     return leftChild;
+}
+
+void PriceLevel::setParent(PriceLevel* p) {
+    parent = p;
 }
 
 void PriceLevel::setRightChild(PriceLevel* child) {

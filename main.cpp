@@ -1,9 +1,8 @@
 #include <iostream>
-#include "order_pool/order_pool.h"
-#include "order/order.h"
-
-
+#include "price_level/price_level.h"
+#include "order_book/order_book.h"
 int main() {
-    std::cout << sizeof(OrderPool) << std::endl; 
+    OrderBook* orderBook = new OrderBook();
+    std::cout << sizeof(orderBook) << std::endl;
     return 0;
 }

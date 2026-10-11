@@ -7,24 +7,44 @@
 #include "../order_pool/order_pool.h"
 
 class OrderBook {
+public:
+    class RedBlackTree {
+    public: 
+        RedBlackTree();
+        PriceLevel* insert(std::int32_t price);
+        void remove(PriceLevel* nodeToRemove);
+        void leftRotate(PriceLevel* x); 
+        void rightRotate(PriceLevel* y);
+        PriceLevel* getRoot() const;
+        PriceLevel* getNil() const;
+    private:
+        void transplant(PriceLevel* u, PriceLevel* v);
+        void fixInsert(PriceLevel* z);
+        void fixRemove(PriceLevel* x); 
+        PriceLevel* nil;
+        PriceLevel* root;
+    };
+    OrderBook(int poolSize = ORDER_POOL_SIZE);
+    ~OrderBook(); 
+    std::uint64_t addOrder(std::int32_t quantity, std::int32_t price, std::uint64_t sequence, Side side );
+    void removeOrder(std::uint64_t orderId);
+    std::uint64_t modifyOrder(std::uint64_t orderId, std::int32_t newQuantity, std::int32_t newPrice);
+    Order* getOrder(std::uint64_t orderId) const;
+    PriceLevel* getBestBid() const;
+    void setBestBid(PriceLevel* level);
+    PriceLevel* getBestAsk() const;
+    void setBestAsk(PriceLevel* level);
+    void insertPriceLevel(std::int32_t price, Side side);
+    void removePriceLevel(std::int32_t price, Side side); 
+
 private:
     std::unordered_map<std::uint64_t, Order*> orderMap;
     std::unordered_map<std::int32_t, PriceLevel*> buyPriceLevelMap;
     std::unordered_map<std::int32_t, PriceLevel*> sellPriceLevelMap;
     OrderPool orderPool; 
-    PriceLevel* buyTree;
-    PriceLevel* sellTree;
+    RedBlackTree* buyTree;
+    PriceLevel* bestBid;
+    RedBlackTree* sellTree;
+    PriceLevel* bestAsk;
     std::uint64_t idCounter;
-    
-public:
-    OrderBook(int poolSize = ORDER_POOL_SIZE);
-    ~OrderBook(); 
-    uint64_t addOrder(std::int32_t quantity, std::int32_t price, std::uint64_t sequence, Side side );
-    void removeOrder(std::uint64_t orderId);
-    void modifyOrder(std::uint64_t orderId, std::int32_t newQuantity, std::int32_t newPrice);
-    Order* getOrder(std::uint64_t orderId) const;
-    PriceLevel* getBestBid() const; 
-    PriceLevel* getBestAsk() const;
-    void insertPriceLevel(std::int32_t price);
-    void removePriceLevel(std::int32_t price); 
 };

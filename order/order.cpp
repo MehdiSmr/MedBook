@@ -32,6 +32,13 @@ Side Order::getSide() const {
     return side;
 }
 
+void Order::setQuantity(std::int32_t newQuantity) {
+    if (newQuantity < 0) {
+        throw std::invalid_argument("Quantity cannot be negative");
+    }
+    quantity = newQuantity;
+    remaining = newQuantity; // Reset remaining to the new quantity
+}
 void Order::reduceRemaining(std::int32_t amount) {
     if (amount > remaining) {
         throw std::invalid_argument("Amount to reduce exceeds remaining quantity");

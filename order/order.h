@@ -26,6 +26,7 @@ public:
     std::int32_t getPrice() const;
     std::uint64_t getSequence() const;
     Side getSide() const;
+    void setQuantity(std::int32_t newQuantity);
     void reduceRemaining(std::int32_t amount);
     Order* getNext() const; 
     void setNext(Order* nextOrder); 

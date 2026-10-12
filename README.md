@@ -9,16 +9,6 @@ Supported platforms: macOS and Linux.
 - A C++23 compiler: Clang 15+ or GCC 11+
 - CMake 3.20+
 
-macOS (Homebrew):
-```sh
-brew install cmake googletest
-```
-
-Ubuntu / Debian:
-```sh
-sudo apt install build-essential cmake libgtest-dev
-```
-
 ### Build
 ```sh
 cmake -S . -B build

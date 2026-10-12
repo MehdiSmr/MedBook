@@ -1,5 +1,5 @@
-#include "order_book.h"
 #include <cstdint>
+#include "order_book.h"
 #include "../price_level/price_level.h"
 #include "../order/order.h"
 #include "../side/side.h"
@@ -86,23 +86,146 @@ void OrderBook::RedBlackTree::fixInsert(PriceLevel* z) {
 }
 
 void OrderBook::RedBlackTree::remove(PriceLevel* nodeToRemove) {
-    // Implementation of Red-Black Tree removal logic goes here
+    if (nodeToRemove == nullptr || nodeToRemove == nil) {
+        return;
+    }
+    PriceLevel* y = nodeToRemove;
+    PriceLevel::Color originalColor = y->getColor();
+    PriceLevel* x;
+
+    if (nodeToRemove->getLeftChild() == nil) {
+        x = nodeToRemove->getRightChild();
+        transplant(nodeToRemove, nodeToRemove->getRightChild());
+    } else if (nodeToRemove->getRightChild() == nil) {
+        x = nodeToRemove->getLeftChild();
+        transplant(nodeToRemove, nodeToRemove->getLeftChild());
+    } else {
+        y = nodeToRemove->getRightChild();
+        while (y->getLeftChild() != nil) {
+            y = y->getLeftChild();
+        }
+        originalColor = y->getColor();
+        x = y->getRightChild();
+        if (y->getParent() == nodeToRemove) {
+            x->setParent(y);
+        } else {
+            transplant(y, y->getRightChild());
+            y->setRightChild(nodeToRemove->getRightChild());
+            y->getRightChild()->setParent(y);
+        }
+        transplant(nodeToRemove, y);
+        y->setLeftChild(nodeToRemove->getLeftChild());
+        y->getLeftChild()->setParent(y);
+        y->setColor(nodeToRemove->getColor());
+    }
+
+    if (originalColor == PriceLevel::Color::BLACK) {
+        fixRemove(x);
+    }    
 }
 
 void OrderBook::RedBlackTree::fixRemove(PriceLevel* x) {
-    // Implementation of Red-Black Tree removal fix-up logic goes here
+    while (x != root && x->getColor() == PriceLevel::Color::BLACK) {
+        if (x == x->getParent()->getLeftChild()) {
+            PriceLevel* w = x->getParent()->getRightChild();
+            if (w->getColor() == PriceLevel::Color::RED) {
+                w->setColor(PriceLevel::Color::BLACK);
+                x->getParent()->setColor(PriceLevel::Color::RED);
+                leftRotate(x->getParent());
+                w = x->getParent()->getRightChild();
+            }
+            if (w->getLeftChild()->getColor() == PriceLevel::Color::BLACK && w->getRightChild()->getColor() == PriceLevel::Color::BLACK) {
+                w->setColor(PriceLevel::Color::RED);
+                x = x->getParent();
+            } else {
+                if (w->getRightChild()->getColor() == PriceLevel::Color::BLACK) {
+                    w->getLeftChild()->setColor(PriceLevel::Color::BLACK);
+                    w->setColor(PriceLevel::Color::RED);
+                    rightRotate(w);
+                    w = x->getParent()->getRightChild();
+                }
+                w->setColor(x->getParent()->getColor());
+                x->getParent()->setColor(PriceLevel::Color::BLACK);
+                w->getRightChild()->setColor(PriceLevel::Color::BLACK);
+                leftRotate(x->getParent());
+                x = root;
+            }
+        } else {
+            PriceLevel* w = x->getParent()->getLeftChild();
+            if (w->getColor() == PriceLevel::Color::RED) {
+                w->setColor(PriceLevel::Color::BLACK);
+                x->getParent()->setColor(PriceLevel::Color::RED);
+                rightRotate(x->getParent());
+                w = x->getParent()->getLeftChild();
+            }
+            if (w->getRightChild()->getColor() == PriceLevel::Color::BLACK && w->getLeftChild()->getColor() == PriceLevel::Color::BLACK) {
+                w->setColor(PriceLevel::Color::RED);
+                x = x->getParent();
+            } else {
+                if (w->getLeftChild()->getColor() == PriceLevel::Color::BLACK) {
+                    w->getRightChild()->setColor(PriceLevel::Color::BLACK);
+                    w->setColor(PriceLevel::Color::RED); 
+                    leftRotate(w);
+                    w = x->getParent()->getLeftChild();
+                }
+                w->setColor(x->getParent()->getColor());
+                x->getParent()->setColor(PriceLevel::Color::BLACK);
+                w->getLeftChild()->setColor(PriceLevel::Color::BLACK);
+                rightRotate(x->getParent());
+                x = root;
+            }
+        }
+    }
+    x->setColor(PriceLevel::Color::BLACK);
 }
 
 void OrderBook::RedBlackTree::transplant(PriceLevel* u, PriceLevel* v) {
-    // Implementation of Red-Black Tree transplant logic goes here
+    if (u->getParent() == nullptr) {
+        root = v;
+    } else if (u == u->getParent()->getLeftChild()) {
+        u->getParent()->setLeftChild(v);
+    } else {
+        u->getParent()->setRightChild(v);
+    }
+    if (v != nil) {
+        v->setParent(u->getParent());
+    } 
 }
 
 void OrderBook::RedBlackTree::leftRotate(PriceLevel* x) {
-    // Implementation of left rotation logic goes here
+    PriceLevel* y = x->getRightChild();
+    x->setRightChild(y->getLeftChild());
+    if (y->getLeftChild() != nil) {
+        y->getLeftChild()->setParent(x);
+    }
+    y->setParent(x->getParent());
+    if (x->getParent() == nullptr) {
+        root = y;
+    } else if (x == x->getParent()->getLeftChild()) {
+        x->getParent()->setLeftChild(y);
+    } else {
+        x->getParent()->setRightChild(y);
+    }
+    y->setLeftChild(x);
+    x->setParent(y);
 }
 
 void OrderBook::RedBlackTree::rightRotate(PriceLevel* y) {
-    // Implementation of right rotation logic goes here
+    PriceLevel* x = y->getLeftChild();
+    y->setLeftChild(x->getRightChild());
+    if (x->getRightChild() != nil) {
+        x->getRightChild()->setParent(y);
+    }
+    x->setParent(y->getParent());
+    if (y->getParent() == nullptr) {
+        root = x;
+    } else if (y == y->getParent()->getRightChild()) {
+        y->getParent()->setRightChild(x);
+    } else {
+        y->getParent()->setLeftChild(x);
+    }
+    x->setRightChild(y);
+    y->setParent(x); 
 }
 
 OrderBook::OrderBook(int size) : orderPool(size), buyTree(), sellTree(), idCounter(0) {}

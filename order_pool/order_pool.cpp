@@ -1,5 +1,7 @@
-#include "order_pool.h"
 #include <numeric>
+#include <cstdint>
+#include <stdexcept>
+#include "order_pool.h"
 
 OrderPool::OrderPool(int size): 
     pool{std::make_unique<std::byte[]>(size * sizeof(Order))},

@@ -1,7 +1,6 @@
 #pragma once
 #include <cstdint>
 #include <memory>
-#include <array>
 #include <vector>
 #include "../order/order.h"
 

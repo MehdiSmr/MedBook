@@ -1,5 +1,6 @@
 #include <numeric>
 #include <cstdint>
+#include <memory>
 #include <stdexcept>
 #include "order_pool.h"
 
@@ -12,14 +13,13 @@ OrderPool::OrderPool(int size):
     std::iota(freeIndices.begin(), freeIndices.end(), 0);
 }
 
-Order* OrderPool::createOrder(std::uint64_t orderId, std::int32_t quantity, std::int32_t price, std::uint64_t sequence, 
-                              Side side) {
+Order* OrderPool::createOrder(std::uint64_t orderId, std::int32_t quantity, std::int32_t price, Side side) {
     if (freeIndices.empty()) {
         throw std::runtime_error("Order pool is full");
     }
     std::uint32_t index = freeIndices.back();
     freeIndices.pop_back();
-    Order* order = new (&pool[index * sizeof(Order)]) Order(orderId, quantity, price, sequence, side, nullptr, nullptr, nullptr);
+    Order* order = new (&pool[index * sizeof(Order)]) Order(orderId, quantity, price, side, nullptr, nullptr, nullptr);
     inUse[index] = true; // Mark this index as in use 
     return order;
 }

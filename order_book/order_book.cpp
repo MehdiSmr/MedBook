@@ -1,4 +1,5 @@
 #include <cstdint>
+#include <stdexcept>
 #include "order_book.h"
 #include "../price_level/price_level.h"
 #include "../order/order.h"
@@ -236,13 +237,13 @@ OrderBook::~OrderBook() {
     sellPriceLevelMap.clear();
 }
 
-std::uint64_t OrderBook::addOrder(std::int32_t quantity, std::int32_t price, std::uint64_t sequence, Side side) {
-    if (quantity <= 0 || price <= 0 || sequence <= 0) {
-        throw std::invalid_argument("Quantity and price and sequence must be positive");
+std::uint64_t OrderBook::addOrder(std::int32_t quantity, std::int32_t price, Side side) {
+    if (quantity <= 0 || price <= 0) {
+        throw std::invalid_argument("Quantity and price must be positive");
     }
 
     std::uint64_t orderId = ++idCounter;
-    Order* newOrder = orderPool.createOrder(orderId, quantity, price, sequence, side);
+    Order* newOrder = orderPool.createOrder(orderId, quantity, price, side);
     orderMap[orderId] = newOrder;
 
     if (side == Side::BUY) {
@@ -298,11 +299,10 @@ std::uint64_t OrderBook::modifyOrder(std::uint64_t orderId, std::int32_t newQuan
                 removePriceLevel(level->getPrice(), orderToModify->getSide());
             }
         }
-        std::uint64_t newSequence = orderToModify->getSequence(); 
         Side newSide = orderToModify->getSide(); 
         orderPool.destroyOrder(orderToModify); 
         orderMap.erase(orderId);
-        std::uint64_t newOrderId = addOrder(newQuantity, newPrice, newSequence, newSide);
+        std::uint64_t newOrderId = addOrder(newQuantity, newPrice, newSide);
         return newOrderId;
     } else {
         throw std::invalid_argument("Order ID not found");

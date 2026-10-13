@@ -7,7 +7,7 @@
 namespace {
 
 Order makeOrder(std::uint64_t id, std::int32_t price = 100) {
-    return Order(id, 10, price, id, Side::BUY, nullptr, nullptr, nullptr);
+    return Order(id, 10, price, Side::BUY, nullptr, nullptr, nullptr);
 }
 
 // Walks head -> tail and checks the links match `expected` in both directions.

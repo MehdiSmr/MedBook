@@ -7,10 +7,8 @@
 
 namespace {
 
-std::uint64_t seq = 0;
-
 std::uint64_t add(OrderBook& book, Side side, std::int32_t price, std::int32_t qty = 10) {
-    return book.addOrder(qty, price, ++seq, side);
+    return book.addOrder(qty, price, side);
 }
 
 // Orders resting at the level that holds `id`, head to tail.
@@ -56,9 +54,9 @@ TEST(OrderBook, AddReturnsUniqueIdsAndStoresOrder) {
 
 TEST(OrderBook, AddRejectsNonPositiveInput) {
     OrderBook book(16);
-    EXPECT_THROW(book.addOrder(0, 100, 1, Side::BUY), std::invalid_argument);
-    EXPECT_THROW(book.addOrder(10, 0, 1, Side::BUY), std::invalid_argument);
-    EXPECT_THROW(book.addOrder(-5, 100, 1, Side::BUY), std::invalid_argument);
+    EXPECT_THROW(book.addOrder(0, 100, Side::BUY), std::invalid_argument);
+    EXPECT_THROW(book.addOrder(10, 0, Side::BUY), std::invalid_argument);
+    EXPECT_THROW(book.addOrder(-5, 100, Side::BUY), std::invalid_argument);
 }
 
 TEST(OrderBook, FirstBuySetsBestBid) {

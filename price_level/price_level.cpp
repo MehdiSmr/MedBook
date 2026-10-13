@@ -21,7 +21,7 @@ void PriceLevel::setColor(Color c) {
     color = c;
 }
 
-std::int64_t PriceLevel::getDepth() const {
+std::int32_t PriceLevel::getDepth() const {
     return depth;
 }
 

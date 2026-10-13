@@ -5,19 +5,18 @@
 namespace {
 
 Order makeOrder(std::uint64_t id = 1, std::int32_t qty = 10, std::int32_t price = 100,
-                std::uint64_t seq = 1, Side side = Side::BUY) {
-    return Order(id, qty, price, seq, side, nullptr, nullptr, nullptr);
+                Side side = Side::BUY) {
+    return Order(id, qty, price, side, nullptr, nullptr, nullptr);
 }
 
 } // namespace
 
 TEST(Order, ConstructorSetsAllFields) {
-    Order o = makeOrder(42, 10, 100, 7, Side::SELL);
+    Order o = makeOrder(42, 10, 100, Side::SELL);
     EXPECT_EQ(o.getOrderId(), 42u);
     EXPECT_EQ(o.getQuantity(), 10);
     EXPECT_EQ(o.getRemaining(), 10) << "a new order has nothing filled yet";
     EXPECT_EQ(o.getPrice(), 100);
-    EXPECT_EQ(o.getSequence(), 7u);
     EXPECT_EQ(o.getSide(), Side::SELL);
     EXPECT_EQ(o.getNext(), nullptr);
     EXPECT_EQ(o.getPrev(), nullptr);

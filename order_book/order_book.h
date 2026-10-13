@@ -26,7 +26,7 @@ public:
     };
     OrderBook(int poolSize = ORDER_POOL_SIZE);
     ~OrderBook(); 
-    std::uint64_t addOrder(std::int32_t quantity, std::int32_t price, std::uint64_t sequence, Side side );
+    std::uint64_t addOrder(std::int32_t quantity, std::int32_t price, Side side );
     void removeOrder(std::uint64_t orderId);
     std::uint64_t modifyOrder(std::uint64_t orderId, std::int32_t newQuantity, std::int32_t newPrice);
     Order* getOrder(std::uint64_t orderId) const;

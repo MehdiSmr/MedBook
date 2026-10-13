@@ -14,7 +14,7 @@ public:
     void setParent(PriceLevel* p); 
     void setRightChild(PriceLevel* child);
     void setLeftChild(PriceLevel* child);
-    std::int64_t getDepth() const;
+    std::int32_t getDepth() const;
     std::int32_t getPrice() const;
     Color getColor() const;
     void setColor(Color c);
@@ -29,6 +29,6 @@ private:
     PriceLevel* parent;
     PriceLevel* rightChild; 
     PriceLevel* leftChild;
-    std::int64_t depth;
+    std::int32_t depth;
     const std::int32_t price;
 };

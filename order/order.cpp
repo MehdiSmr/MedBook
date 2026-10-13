@@ -3,9 +3,9 @@
 #include "order.h" 
 #include "../side/side.h"
 
-Order::Order(std::uint64_t orderId, std::int32_t quantity, std::int32_t price, std::uint64_t sequence, 
+Order::Order(std::uint64_t orderId, std::int32_t quantity, std::int32_t price,
         Side side, Order *next, Order *prev, PriceLevel *level)
-    : orderId(orderId), quantity(quantity), remaining(quantity), price(price), sequence(sequence), 
+    : orderId(orderId), quantity(quantity), remaining(quantity), price(price), 
     next(next), prev(prev), level(level), side(side) {}
 
 std::uint64_t Order::getOrderId() const {
@@ -22,10 +22,6 @@ std::int32_t Order::getRemaining() const {
 
 std::int32_t Order::getPrice() const {
     return price;
-}
-
-std::uint64_t Order::getSequence() const {
-    return sequence;
 }
 
 Side Order::getSide() const {

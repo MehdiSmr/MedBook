@@ -11,20 +11,18 @@ private:
     std::int32_t quantity;
     std::int32_t remaining; 
     std::int32_t price;
-    std::uint64_t sequence;
     Order *next;
     Order *prev;
     PriceLevel *level;
     Side side;
 
 public:
-    Order(std::uint64_t orderId, std::int32_t quantity, std::int32_t price, std::uint64_t sequence, 
+    Order(std::uint64_t orderId, std::int32_t quantity, std::int32_t price, 
             Side side, Order *next, Order *prev, PriceLevel *level);
     std::uint64_t getOrderId() const;
     std::int32_t getQuantity() const;
     std::int32_t getRemaining() const;
     std::int32_t getPrice() const;
-    std::uint64_t getSequence() const;
     Side getSide() const;
     void setQuantity(std::int32_t newQuantity);
     void reduceRemaining(std::int32_t amount);

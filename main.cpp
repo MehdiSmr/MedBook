@@ -9,7 +9,9 @@
 //   --pool N      order pool slots per symbol (default: 200000)
 //   --expected F  expected trades to compare against (default: <feed>_trades.csv if it exists)
 //   --focus SYM   symbol shown in the depth panel first
+//   --slow-us N   list commands slower than N µs in the report (default: 50)
 #include <algorithm>
+#include <array>
 #include <chrono>
 #include <csignal>
 #include <cstdio>
@@ -47,6 +49,7 @@ struct Options {
     bool ui = true;
     std::string out = "out";
     int pool = 200'000;
+    double slowUs = 50;
     std::string expected;
     std::string focus;
 };
@@ -72,6 +75,7 @@ Options parseArgs(int argc, char** argv) {
         else if (a == "--pool") o.pool = std::atoi(value().c_str());
         else if (a == "--expected") o.expected = value();
         else if (a == "--focus") o.focus = value();
+        else if (a == "--slow-us") o.slowUs = std::strtod(value().c_str(), nullptr);
         else if (a.rfind("--", 0) == 0) usage(("unknown option " + a).c_str());
         else if (!feedSet) { o.feed = a; feedSet = true; }
         else usage("more than one feed file");
@@ -125,6 +129,49 @@ bool checkExpected(const std::string& path, const ReplayState& state, std::ostre
         out << "  " << name << ": MISMATCH  expected " << formatCount(e.trades) << " trades, symbol not traded\n";
     }
     return ok;
+}
+
+// One command that took longer than --slow-us inside the engine.
+struct SlowCall {
+    std::uint64_t ns;
+    std::uint64_t lineNumber;
+    FeedAction action;
+    std::uint64_t trades;     // Trades this one command produced
+    double wallSeconds;       // When it happened, since the replay started
+};
+
+const char* actionName(FeedAction a) {
+    return a == FeedAction::ADD ? "ADD" : a == FeedAction::MODIFY ? "MODIFY" : "CANCEL";
+}
+
+// Shows where the slow calls are: which commands, how many trades, and when in the run.
+void printSlowCalls(std::ostream& out, std::vector<SlowCall> slow, double thresholdUs, const ReplayState& state) {
+    out << "slow calls (> " << thresholdUs << "µs): " << formatCount(slow.size()) << " of "
+        << formatCount(state.latency.getCount()) << '\n';
+    if (slow.empty()) return;
+    std::array<std::uint64_t, 10> byTenth{};
+    std::uint64_t withTrades = 0;
+    for (const SlowCall& c : slow) {
+        double at = state.wallSeconds > 0 ? c.wallSeconds / state.wallSeconds : 0;
+        byTenth[std::min<std::size_t>(9, static_cast<std::size_t>(at * 10))]++;
+        withTrades += c.trades > 0;
+    }
+    out << "  when (each tenth of the run):";
+    for (auto n : byTenth) out << ' ' << n;
+    out << '\n';
+    std::uint64_t accepted = state.latency.getCount();
+    out << "  with at least one trade: " << formatCount(withTrades) << " (" << (100 * withTrades / slow.size())
+        << "%; all commands: " << (accepted ? 100 * state.trades / accepted : 0) << " trades per 100 commands)\n";
+    std::sort(slow.begin(), slow.end(), [](const SlowCall& a, const SlowCall& b) { return a.ns > b.ns; });
+    out << "  slowest:\n";
+    for (std::size_t i = 0; i < std::min<std::size_t>(10, slow.size()); ++i) {
+        const SlowCall& c = slow[i];
+        char buf[160];
+        std::snprintf(buf, sizeof buf, "    %9s  line %-9llu %-6s trades %-3llu at %.3fs\n", formatNs(c.ns).c_str(),
+                      static_cast<unsigned long long>(c.lineNumber), actionName(c.action),
+                      static_cast<unsigned long long>(c.trades), c.wallSeconds);
+        out << buf;
+    }
 }
 
 } // namespace
@@ -214,6 +261,9 @@ int main(int argc, char** argv) {
         nextFrame = now + frame;
     };
 
+    std::vector<SlowCall> slowCalls;
+    const auto slowNs = static_cast<std::uint64_t>(opt.slowUs * 1000);
+
     FeedLine line;
     while (!quit && !interrupted && feed->next(line)) {
         if (state.speed > 0 && !line.malformed) {
@@ -239,7 +289,12 @@ int main(int argc, char** argv) {
             if (quit || interrupted) break;
         }
 
+        std::uint64_t tradesBefore = state.trades;
         ApplyResult result = feed->apply(engine, line);
+        if (result.engineNs > slowNs) {
+            double at = std::chrono::duration<double>(Clock::now() - wallStart).count();
+            slowCalls.push_back({result.engineNs, line.lineNumber, line.action, state.trades - tradesBefore, at});
+        }
         state.lines += 1;
         state.outcomes[static_cast<std::size_t>(result.reason)] += 1;
         if (result.engineNs) state.latency.record(result.engineNs);
@@ -263,6 +318,7 @@ int main(int argc, char** argv) {
     state.wallSeconds = std::chrono::duration<double>(Clock::now() - wallStart).count();
     dashboard.reset(); // Leave the dashboard screen before printing the report
     printReport(std::cout, state);
+    printSlowCalls(std::cout, slowCalls, opt.slowUs, state);
 
     int status = 0;
     if (!opt.expected.empty()) {

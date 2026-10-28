@@ -3,6 +3,9 @@
 A limit order book and matching engine in C++23, with a feed replayer and a live terminal dashboard.
 It ships with a mock feed that replays the 2008 financial crisis (Sep 2008 to Mar 2009) in two minutes.
 
+## Video Demo
+https://github.com/user-attachments/assets/d3cbefc3-b916-4aad-9210-282d87940bf2
+
 ## Architecture
 
 ```
@@ -24,9 +27,6 @@ crisis_feed.py ──► feed file (CSV) ──► FeedSource ──► Matching
 Supported commands: limit `ADD`, `MODIFY` and `CANCEL`. A modify that only lowers the quantity keeps the
 order's place in the queue; raising the quantity or changing the price sends it to the back with a new
 id. Orders that have partially filled can't be modified.
-
-## Video Demo
-https://github.com/user-attachments/assets/d3cbefc3-b916-4aad-9210-282d87940bf2
 
 ## Build & test
 

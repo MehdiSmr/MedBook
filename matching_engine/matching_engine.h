@@ -1,5 +1,6 @@
 #pragma once
 #include <cstdint>
+#include <functional>
 #include <iostream>
 #include <string>
 #include <vector>
@@ -11,6 +12,8 @@
 
 class MatchingEngine {
 public:
+    using TradeListener = std::function<void(const Trade&)>;
+
     // One book per symbol, fixed for the engine's lifetime. Trades for each symbol
     // go to <outputDir>/trades_<symbol>.csv ('/' and other non-alphanumerics become '_').
     MatchingEngine(const std::vector<std::string>& symbols, int poolSize = ORDER_POOL_SIZE,
@@ -21,12 +24,16 @@ public:
     std::uint64_t processCommand(const std::string& symbol, const Command& command);
 
     const OrderBook& getOrderBook(const std::string& symbol) const;
+    bool hasSymbol(const std::string& symbol) const;
+    // Called for every trade, after it is written to the trade file (e.g. for live monitoring).
+    void setTradeListener(TradeListener listener);
     void printOrderBook(const std::string& symbol, std::ostream& out = std::cout) const;
 
 private:
     std::unordered_map<std::string, OrderBook> order_books; // Map to hold order books for each symbol
     std::unordered_map<std::string, std::ofstream> tradeFiles; // Map to hold trade output files for each symbol
     std::uint64_t tradeSequence = 0; // Sequence number for trades, shared across symbols
+    TradeListener tradeListener;
 
     OrderBook& getBook(const std::string& symbol);
     std::ofstream& getTradeFile(const std::string& symbol); // Get the trade output file for a specific symbol

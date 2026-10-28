@@ -21,6 +21,7 @@ TEST(Order, ConstructorSetsAllFields) {
     EXPECT_EQ(o.getNext(), nullptr);
     EXPECT_EQ(o.getPrev(), nullptr);
     EXPECT_EQ(o.getLevel(), nullptr);
+    EXPECT_FALSE(o.hasTraded()) << "a new order has not traded";
 }
 
 // Fills, quantity changes and link changes are private to OrderBook and PriceLevel now;

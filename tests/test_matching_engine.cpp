@@ -331,3 +331,40 @@ TEST_F(MatchingEngineTest, PrintShowsLevelsHighestFirst) {
               "  99 4 1\n"
               "  98 6 1\n");
 }
+
+// ---------- listener ----------
+
+TEST_F(MatchingEngineTest, TradeListenerSeesEveryTrade) {
+    std::vector<Trade> seen;
+    engine->setTradeListener([&](const Trade& t) { seen.push_back(t); });
+    std::uint64_t a = add(Side::SELL, 100, 5);
+    add(Side::SELL, 101, 5);
+    std::uint64_t buy = add(Side::BUY, 101, 7);
+    ASSERT_EQ(seen.size(), 2u);
+    EXPECT_EQ(seen[0].symbol, BTC);
+    EXPECT_EQ(seen[0].restingId, a);
+    EXPECT_EQ(seen[0].aggressorId, buy);
+    EXPECT_EQ(seen[0].quantity, 5);
+    EXPECT_EQ(seen[1].price, 101);
+    EXPECT_EQ(seen[1].quantity, 2);
+    EXPECT_TRUE(engine->hasSymbol(BTC));
+    EXPECT_FALSE(engine->hasSymbol("ETH/USD"));
+}
+
+// ---------- traded flag on the aggressor's remainder ----------
+
+TEST_F(MatchingEngineTest, RestOfAPartlyFilledAggressorCannotBeModified) {
+    add(Side::SELL, 100, 4);
+    std::uint64_t buy = add(Side::BUY, 101, 10);   // 4 fill, 6 rest
+    const Order* rested = book().getOrder(buy);
+    ASSERT_NE(rested, nullptr);
+    EXPECT_TRUE(rested->hasTraded());
+    EXPECT_THROW(modify(buy, 3, 101), std::invalid_argument) << "same-price reduce";
+    EXPECT_THROW(modify(buy, 6, 99), std::invalid_argument) << "price change";
+    EXPECT_EQ(book().getOrder(buy)->getRemaining(), 6);
+}
+
+TEST_F(MatchingEngineTest, AggressorThatDidNotTradeIsNotMarked) {
+    std::uint64_t buy = add(Side::BUY, 99, 10);
+    EXPECT_FALSE(book().getOrder(buy)->hasTraded());
+}

@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <limits>
 #include <cctype>
 #include <filesystem>
 #include <stdexcept>
@@ -16,14 +17,6 @@ std::string fileSafe(const std::string& symbol) {
         if (!std::isalnum(static_cast<unsigned char>(c))) c = '_';
     }
     return out;
-}
-
-// In-order walk, so levels come out lowest price first.
-void collectLevels(const PriceLevel* node, const PriceLevel* nil, std::vector<const PriceLevel*>& out) {
-    if (node == nullptr || node == nil) return;
-    collectLevels(node->getLeftChild(), nil, out);
-    out.push_back(node);
-    collectLevels(node->getRightChild(), nil, out);
 }
 
 std::int32_t levelQuantity(const PriceLevel* level) {
@@ -65,6 +58,14 @@ std::uint64_t MatchingEngine::processCommand(const std::string& symbol, const Co
         else if constexpr (std::is_same_v<T, ModifyCommand>) return processModifyCommand(symbol, cmd);
         else return processCancelCommand(symbol, cmd);
     }, command);
+}
+
+bool MatchingEngine::hasSymbol(const std::string& symbol) const {
+    return order_books.contains(symbol);
+}
+
+void MatchingEngine::setTradeListener(TradeListener listener) {
+    tradeListener = std::move(listener);
 }
 
 const OrderBook& MatchingEngine::getOrderBook(const std::string& symbol) const {
@@ -117,8 +118,8 @@ std::uint64_t MatchingEngine::processModifyCommand(const std::string& symbol, co
         return book.modifyOrder(modifyCommand.orderId, modifyCommand.newQuantity, modifyCommand.newPrice);
     }
 
-    // Same rule as OrderBook::modifyOrder: a partially filled order can't be modified.
-    if (order->getRemaining() != order->getQuantity()) {
+    // Same rule as OrderBook::modifyOrder, using the flag the book maintains.
+    if (order->hasTraded()) {
         throw std::invalid_argument("Cannot modify an order that has already been partially filled");
     }
 
@@ -153,23 +154,21 @@ std::uint64_t MatchingEngine::match(const std::string& symbol, Side side, std::i
         Trade trade{symbol, resting->getOrderId(), aggressorId, fillQuantity, best->getPrice(), ++tradeSequence};
         book.fillOrder(resting->getOrderId(), fillQuantity);
         writeTradeToFile(trade);
+        if (tradeListener) tradeListener(trade);
         remaining -= fillQuantity;
     }
 
     if (remaining > 0) {
-        book.addOrder(aggressorId, remaining, price, side);
+        book.addOrder(aggressorId, remaining, price, side, remaining < quantity); // Partly filled on arrival
     }
     return aggressorId;
 }
 
 void MatchingEngine::printOrderBook(const std::string& symbol, std::ostream& out) const {
     const OrderBook& book = getOrderBook(symbol);
-    const OrderBook::RedBlackTree* asks = book.getTree(Side::SELL);
-    const OrderBook::RedBlackTree* bids = book.getTree(Side::BUY);
-
-    std::vector<const PriceLevel*> askLevels, bidLevels;
-    collectLevels(asks->getRoot(), asks->getNil(), askLevels);
-    collectLevels(bids->getRoot(), bids->getNil(), bidLevels);
+    const std::size_t all = std::numeric_limits<std::size_t>::max();
+    std::vector<const PriceLevel*> askLevels = book.getLevels(Side::SELL, all); // lowest first
+    std::vector<const PriceLevel*> bidLevels = book.getLevels(Side::BUY, all);  // highest first
 
     // Highest price at the top: asks above the spread, bids below.
     out << "== " << symbol << " ==\n";
@@ -179,7 +178,7 @@ void MatchingEngine::printOrderBook(const std::string& symbol, std::ostream& out
     }
     out << "----\n";
     out << "BIDS (price qty orders)\n";
-    for (auto it = bidLevels.rbegin(); it != bidLevels.rend(); ++it) {
-        out << "  " << (*it)->getPrice() << ' ' << levelQuantity(*it) << ' ' << (*it)->getDepth() << '\n';
+    for (const PriceLevel* level : bidLevels) {
+        out << "  " << level->getPrice() << ' ' << levelQuantity(level) << ' ' << level->getDepth() << '\n';
     }
 }

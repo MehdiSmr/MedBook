@@ -71,3 +71,7 @@ vcpkg_installed/
 # test output & cache
 Testing/
 .cache/
+
+# Generated feeds (python3 crisis_feed.py --out data) and replay output
+data/
+out/

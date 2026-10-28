@@ -1,5 +1,5 @@
 # MedBook
-Limit Order Book Matching Engine with Signal &amp; Backtest
+Limit Order Book Matching Engine
 
 ## Build & test
 
@@ -26,3 +26,21 @@ ctest --test-dir build --output-on-failure
 Each test case runs as its own process, so one crashing test doesn't hide the results of the others.
 Builds use AddressSanitizer and UndefinedBehaviorSanitizer by default; to turn them off:
 `cmake -S . -B build -DMEDBOOK_SANITIZE=OFF`.
+
+### Replay the 2008 crisis feed
+Generate the mock feeds (Python 3, standard library only; ~6M lines, ~210 MB in `data/`):
+```sh
+python3 crisis_feed.py --out data
+```
+
+Build without sanitizers for realistic latency numbers, then replay with the live dashboard:
+```sh
+cmake -S . -B build-release -DCMAKE_BUILD_TYPE=Release -DMEDBOOK_SANITIZE=OFF -DMEDBOOK_BUILD_TESTS=OFF
+cmake --build build-release
+./build-release/main data/crisis_2008.csv            # 2 minutes, real time
+./build-release/main data/crisis_2008.csv --speed 0 --no-ui   # as fast as possible, report only
+```
+
+Keys: `n`/`p` change the symbol in the depth panel, `+`/`-` change speed, space pauses, `q` quits.
+At the end the engine's trades are compared per symbol with `data/crisis_2008_trades.csv`, the generator's
+own reference matcher. All options are listed at the top of `main.cpp`.

@@ -449,3 +449,59 @@ TEST(OrderBook, PartiallyFilledOrderCannotBeModified) {
     book.fillOrder(a, 3);
     EXPECT_THROW(book.modifyOrder(a, 5, 100), std::invalid_argument);
 }
+
+// ---------- read-only views ----------
+
+TEST(OrderBook, OrderCountCountsBothSides) {
+    OrderBook book(16);
+    EXPECT_EQ(book.getOrderCount(), 0u);
+    add(book, Side::BUY, 100);
+    add(book, Side::BUY, 100);
+    std::uint64_t s = add(book, Side::SELL, 105);
+    EXPECT_EQ(book.getOrderCount(), 3u);
+    book.removeOrder(s);
+    EXPECT_EQ(book.getOrderCount(), 2u);
+}
+
+TEST(OrderBook, GetLevelsReturnsBestFirstAndStopsAtTheLimit) {
+    OrderBook book(64);
+    for (std::int32_t p : {103, 99, 101, 100, 104, 102}) add(book, Side::SELL, p);
+    for (std::int32_t p : {90, 95, 92, 94, 91, 93}) add(book, Side::BUY, p);
+    auto prices = [](const std::vector<const PriceLevel*>& levels) {
+        std::vector<std::int32_t> out;
+        for (auto* l : levels) out.push_back(l->getPrice());
+        return out;
+    };
+    EXPECT_EQ(prices(book.getLevels(Side::SELL, 3)), (std::vector<std::int32_t>{99, 100, 101}));
+    EXPECT_EQ(prices(book.getLevels(Side::BUY, 3)), (std::vector<std::int32_t>{95, 94, 93}));
+    EXPECT_EQ(book.getLevels(Side::SELL, 100).size(), 6u);
+    EXPECT_TRUE(book.getLevels(Side::BUY, 0).empty());
+    OrderBook empty(4);
+    EXPECT_TRUE(empty.getLevels(Side::SELL, 5).empty());
+}
+
+// ---------- traded flag ----------
+
+TEST(OrderBook, FillMarksOrderTraded) {
+    OrderBook book(16);
+    std::uint64_t a = add(book, Side::SELL, 100, 10);
+    EXPECT_FALSE(book.getOrder(a)->hasTraded());
+    book.fillOrder(a, 3);
+    EXPECT_TRUE(book.getOrder(a)->hasTraded());
+}
+
+TEST(OrderBook, UnchangedModifyOfTradedOrderStillThrows) {
+    OrderBook book(16);
+    std::uint64_t a = add(book, Side::SELL, 100, 10);
+    book.fillOrder(a, 3);
+    EXPECT_THROW(book.modifyOrder(a, 10, 100), std::invalid_argument) << "same values, but the order has traded";
+    EXPECT_EQ(book.getOrder(a)->getRemaining(), 7);
+}
+
+TEST(OrderBook, AddOrderCanMarkTheRestOfAPartlyFilledOrder) {
+    OrderBook book(16);
+    std::uint64_t id = book.nextOrderId();
+    book.addOrder(id, 6, 101, Side::BUY, true);
+    EXPECT_TRUE(book.getOrder(id)->hasTraded());
+    EXPECT_THROW(book.modifyOrder(id, 3, 101), std::invalid_argument);
+}

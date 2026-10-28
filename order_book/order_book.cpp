@@ -266,7 +266,8 @@ std::uint64_t OrderBook::addOrder(std::int32_t quantity, std::int32_t price, Sid
     return addOrder(nextOrderId(), quantity, price, side);
 }
 
-std::uint64_t OrderBook::addOrder(std::uint64_t orderId, std::int32_t quantity, std::int32_t price, Side side) {
+std::uint64_t OrderBook::addOrder(std::uint64_t orderId, std::int32_t quantity, std::int32_t price, Side side,
+                                  bool alreadyTraded) {
     if (quantity <= 0 || price <= 0) {
         throw std::invalid_argument("Quantity and price must be positive");
     }
@@ -279,6 +280,7 @@ std::uint64_t OrderBook::addOrder(std::uint64_t orderId, std::int32_t quantity, 
     }
 
     Order* newOrder = orderPool.createOrder(orderId, quantity, price, side);
+    if (alreadyTraded) newOrder->markTraded();
     orderMap[orderId] = newOrder;
 
     if (side == Side::BUY) {
@@ -302,6 +304,7 @@ void OrderBook::fillOrder(std::uint64_t orderId, std::int32_t quantity) {
     }
     Order* order = it->second;
     order->reduceRemaining(quantity); // Throws, leaving the order unchanged, if quantity > remaining
+    order->markTraded();
     if (order->getRemaining() == 0) {
         removeOrder(orderId); // List, orderMap and pool, plus the level if it empties
     }
@@ -332,11 +335,12 @@ std::uint64_t OrderBook::modifyOrder(std::uint64_t orderId, std::int32_t newQuan
     auto it = orderMap.find(orderId);
     if (it != orderMap.end()) {
         Order* orderToModify = it->second;
-        if (orderToModify->getQuantity() == newQuantity && orderToModify->getPrice() == newPrice) {
-            return orderId; // No modification needed
-        }
-        else if (orderToModify->getRemaining() != orderToModify->getQuantity()) {
+        // Checked first: a traded order can't be modified, even with unchanged values.
+        if (orderToModify->hasTraded()) {
             throw std::invalid_argument("Cannot modify an order that has already been partially filled");
+        }
+        else if (orderToModify->getQuantity() == newQuantity && orderToModify->getPrice() == newPrice) {
+            return orderId; // No modification needed
         }
         else if (orderToModify->getQuantity() > newQuantity && orderToModify->getPrice() == newPrice) {
             orderToModify->setQuantity(newQuantity); // Update the quantity  
@@ -385,6 +389,32 @@ void OrderBook::setBestAsk(PriceLevel* level) {
 
 const OrderBook::RedBlackTree* OrderBook::getTree(Side side) const {
     return side == Side::BUY ? buyTree : sellTree;
+}
+
+std::size_t OrderBook::getOrderCount() const {
+    return orderMap.size();
+}
+
+std::vector<const PriceLevel*> OrderBook::getLevels(Side side, std::size_t maxLevels) const {
+    // In-order walk with an explicit stack, stopping after maxLevels.
+    // Asks go left-first (ascending), bids right-first (descending), so the best comes first.
+    const RedBlackTree* tree = getTree(side);
+    const PriceLevel* nil = tree->getNil();
+    const bool ascending = (side == Side::SELL);
+    std::vector<const PriceLevel*> levels;
+    std::vector<const PriceLevel*> stack;
+    const PriceLevel* node = tree->getRoot();
+    while (levels.size() < maxLevels && ((node != nullptr && node != nil) || !stack.empty())) {
+        while (node != nullptr && node != nil) {
+            stack.push_back(node);
+            node = ascending ? node->getLeftChild() : node->getRightChild();
+        }
+        node = stack.back();
+        stack.pop_back();
+        levels.push_back(node);
+        node = ascending ? node->getRightChild() : node->getLeftChild();
+    }
+    return levels;
 }
 
 void OrderBook::insertPriceLevel(std::int32_t price, Side side) {

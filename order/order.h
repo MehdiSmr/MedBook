@@ -15,6 +15,7 @@ private:
     Order *prev;
     PriceLevel *level;
     Side side;
+    bool traded; // Set once any quantity of this order has traded; fits in the padding after side
 
 public:
     Order(std::uint64_t orderId, std::int32_t quantity, std::int32_t price, 
@@ -24,6 +25,7 @@ public:
     std::int32_t getRemaining() const;
     std::int32_t getPrice() const;
     Side getSide() const;
+    bool hasTraded() const;
     Order* getNext() const; 
     Order* getPrev() const;
     PriceLevel* getLevel() const;
@@ -35,6 +37,7 @@ private:
     friend class PriceLevel;
     void setQuantity(std::int32_t newQuantity);
     void reduceRemaining(std::int32_t amount);
+    void markTraded();
     void setNext(Order* nextOrder); 
     void setPrev(Order* prevOrder);
     void setLevel(PriceLevel* level); 

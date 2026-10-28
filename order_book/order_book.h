@@ -1,6 +1,7 @@
 #pragma once
 #include <unordered_map>
 #include <cstdint>
+#include <vector>
 #include "../order/order.h"
 #include "../price_level/price_level.h"
 #include "../side/side.h"
@@ -29,7 +30,9 @@ public:
     ~OrderBook(); 
     std::uint64_t nextOrderId(); // Hands out a fresh id without adding an order
     std::uint64_t addOrder(std::int32_t quantity, std::int32_t price, Side side );
-    std::uint64_t addOrder(std::uint64_t orderId, std::int32_t quantity, std::int32_t price, Side side); // id must come from nextOrderId()
+    // id must come from nextOrderId(); alreadyTraded marks the rest of an incoming order that partly filled.
+    std::uint64_t addOrder(std::uint64_t orderId, std::int32_t quantity, std::int32_t price, Side side,
+                           bool alreadyTraded = false);
     void fillOrder(std::uint64_t orderId, std::int32_t quantity); // Reduces remaining; removes the order when it reaches 0
     void removeOrder(std::uint64_t orderId);
     std::uint64_t modifyOrder(std::uint64_t orderId, std::int32_t newQuantity, std::int32_t newPrice);
@@ -37,6 +40,9 @@ public:
     PriceLevel* getBestBid() const;
     PriceLevel* getBestAsk() const;
     const RedBlackTree* getTree(Side side) const;
+    std::size_t getOrderCount() const; // Resting orders, both sides
+    // Up to maxLevels levels on one side, best price first (highest bid / lowest ask).
+    std::vector<const PriceLevel*> getLevels(Side side, std::size_t maxLevels) const;
     void insertPriceLevel(std::int32_t price, Side side);
     void removePriceLevel(std::int32_t price, Side side);
 

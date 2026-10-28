@@ -21,10 +21,12 @@ add_library(medbook_core STATIC
     order_pool/order_pool.cpp
     order_book/order_book.cpp
     matching_engine/matching_engine.cpp
+    feed_source/feed_source.cpp
 )
 target_include_directories(medbook_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
-add_executable(main main.cpp)
+# Replay + terminal dashboard (POSIX terminal APIs: macOS and Linux).
+add_executable(main main.cpp monitor/dashboard.cpp)
 target_link_libraries(main PRIVATE medbook_core)
 
 # ---------- tests ----------
@@ -45,9 +47,10 @@ if(MEDBOOK_BUILD_TESTS)
     enable_testing()
     include(GoogleTest)
 
-    foreach(name test_order test_price_level test_order_pool test_red_black_tree test_order_book test_matching_engine)
+    foreach(name test_order test_price_level test_order_pool test_red_black_tree test_order_book test_matching_engine test_feed_source)
         add_executable(${name} tests/${name}.cpp)
         target_link_libraries(${name} PRIVATE medbook_core GTest::gtest_main)
+        target_compile_definitions(${name} PRIVATE MEDBOOK_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
         gtest_discover_tests(${name})
     endforeach()
 endif()

@@ -6,7 +6,7 @@
 Order::Order(std::uint64_t orderId, std::int32_t quantity, std::int32_t price,
         Side side, Order *next, Order *prev, PriceLevel *level)
     : orderId(orderId), quantity(quantity), remaining(quantity), price(price), 
-    next(next), prev(prev), level(level), side(side) {}
+    next(next), prev(prev), level(level), side(side), traded(false) {}
 
 std::uint64_t Order::getOrderId() const {
     return orderId;
@@ -26,6 +26,14 @@ std::int32_t Order::getPrice() const {
 
 Side Order::getSide() const {
     return side;
+}
+
+bool Order::hasTraded() const {
+    return traded;
+}
+
+void Order::markTraded() {
+    traded = true;
 }
 
 void Order::setQuantity(std::int32_t newQuantity) {

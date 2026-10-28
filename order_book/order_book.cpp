@@ -6,7 +6,14 @@
 #include "../side/side.h"
 
 
-OrderBook::RedBlackTree::RedBlackTree() :  nil(nullptr), root(nil) {}
+OrderBook::RedBlackTree::RedBlackTree() :  nil(new PriceLevel(0)), root(nullptr) {
+    nil->setColor(PriceLevel::Color::BLACK);
+    root = nil;
+}
+
+OrderBook::RedBlackTree::~RedBlackTree() {
+    delete nil;
+}
 
 PriceLevel* OrderBook::RedBlackTree::getRoot() const {
     return root;
@@ -188,9 +195,7 @@ void OrderBook::RedBlackTree::transplant(PriceLevel* u, PriceLevel* v) {
     } else {
         u->getParent()->setRightChild(v);
     }
-    if (v != nil) {
-        v->setParent(u->getParent());
-    } 
+    v->setParent(u->getParent());
 }
 
 void OrderBook::RedBlackTree::leftRotate(PriceLevel* x) {
@@ -229,20 +234,50 @@ void OrderBook::RedBlackTree::rightRotate(PriceLevel* y) {
     y->setParent(x); 
 }
 
-OrderBook::OrderBook(int size) : orderPool(size), buyTree(), sellTree(), idCounter(0) {}
+OrderBook::OrderBook(int size) : orderPool(size), buyTree(new OrderBook::RedBlackTree()), bestBid(nullptr),
+    sellTree(new OrderBook::RedBlackTree()), bestAsk(nullptr), idCounter(0) {}
 
 OrderBook::~OrderBook() {
+    while (!orderMap.empty()) {
+        auto it = orderMap.begin();
+        removeOrder(it->first);
+    }
     orderMap.clear();
+    for (auto& pair : buyPriceLevelMap) {
+        delete pair.second;
+    } 
     buyPriceLevelMap.clear();
+    delete buyTree;
+    for (auto& pair: sellPriceLevelMap) {
+        delete pair.second;
+    }
     sellPriceLevelMap.clear();
+    delete sellTree;
+}
+
+std::uint64_t OrderBook::nextOrderId() {
+    return ++idCounter;
 }
 
 std::uint64_t OrderBook::addOrder(std::int32_t quantity, std::int32_t price, Side side) {
     if (quantity <= 0 || price <= 0) {
         throw std::invalid_argument("Quantity and price must be positive");
     }
+    return addOrder(nextOrderId(), quantity, price, side);
+}
 
-    std::uint64_t orderId = ++idCounter;
+std::uint64_t OrderBook::addOrder(std::uint64_t orderId, std::int32_t quantity, std::int32_t price, Side side) {
+    if (quantity <= 0 || price <= 0) {
+        throw std::invalid_argument("Quantity and price must be positive");
+    }
+    // Only ids handed out by nextOrderId() are allowed, and each one only once.
+    if (orderId == 0 || orderId > idCounter) {
+        throw std::invalid_argument("Order ID was not handed out by nextOrderId");
+    }
+    if (orderMap.contains(orderId)) {
+        throw std::invalid_argument("Order ID already in use");
+    }
+
     Order* newOrder = orderPool.createOrder(orderId, quantity, price, side);
     orderMap[orderId] = newOrder;
 
@@ -255,6 +290,21 @@ std::uint64_t OrderBook::addOrder(std::int32_t quantity, std::int32_t price, Sid
     }
     
     return orderId;
+}
+
+void OrderBook::fillOrder(std::uint64_t orderId, std::int32_t quantity) {
+    if (quantity <= 0) {
+        throw std::invalid_argument("Fill quantity must be positive");
+    }
+    auto it = orderMap.find(orderId);
+    if (it == orderMap.end()) {
+        throw std::invalid_argument("Order ID not found");
+    }
+    Order* order = it->second;
+    order->reduceRemaining(quantity); // Throws, leaving the order unchanged, if quantity > remaining
+    if (order->getRemaining() == 0) {
+        removeOrder(orderId); // List, orderMap and pool, plus the level if it empties
+    }
 }
 
 void OrderBook::removeOrder(std::uint64_t orderId) {
@@ -333,17 +383,26 @@ void OrderBook::setBestAsk(PriceLevel* level) {
     bestAsk = level;
 }
 
+const OrderBook::RedBlackTree* OrderBook::getTree(Side side) const {
+    return side == Side::BUY ? buyTree : sellTree;
+}
+
 void OrderBook::insertPriceLevel(std::int32_t price, Side side) {
     if (side == Side::BUY) { 
         if (buyPriceLevelMap.find(price) == buyPriceLevelMap.end()) {
             PriceLevel* newLevel = buyTree->insert(price);
             buyPriceLevelMap[price] = newLevel;
-
+            if (bestBid == nullptr || price > bestBid->getPrice()) {
+                setBestBid(newLevel);
+            }
         }
     } else {
         if (sellPriceLevelMap.find(price) == sellPriceLevelMap.end()) {
-            PriceLevel* newLevel = sellTree->insert(price); 
+            PriceLevel* newLevel = sellTree->insert(price);
             sellPriceLevelMap[price] = newLevel;
+            if (bestAsk == nullptr || price < bestAsk->getPrice()) {
+                setBestAsk(newLevel);
+            }
         }
     }
 }
@@ -354,6 +413,20 @@ void OrderBook::removePriceLevel(std::int32_t price, Side side) {
         auto it = sellPriceLevelMap.find(price);
         if (it != sellPriceLevelMap.end()) {
             PriceLevel* levelToRemove = it->second;
+            // Find the next best ask before remove() relinks the tree:
+            // leftmost of the right subtree, or the parent (nullptr if the side empties)
+            if (levelToRemove == bestAsk) {
+                PriceLevel* nil = sellTree->getNil();
+                PriceLevel* next = levelToRemove->getRightChild();
+                if (next != nil) {
+                    while (next->getLeftChild() != nil) {
+                        next = next->getLeftChild();
+                    }
+                } else {
+                    next = levelToRemove->getParent();
+                }
+                setBestAsk(next);
+            }
             sellTree->remove(levelToRemove);
             sellPriceLevelMap.erase(it);
             delete levelToRemove;
@@ -362,6 +435,20 @@ void OrderBook::removePriceLevel(std::int32_t price, Side side) {
         auto it = buyPriceLevelMap.find(price);
         if (it != buyPriceLevelMap.end()) {
             PriceLevel* levelToRemove = it->second;
+            // Find the next best bid before remove() relinks the tree:
+            // rightmost of the left subtree, or the parent (nullptr if the side empties)
+            if (levelToRemove == bestBid) {
+                PriceLevel* nil = buyTree->getNil();
+                PriceLevel* next = levelToRemove->getLeftChild();
+                if (next != nil) {
+                    while (next->getRightChild() != nil) {
+                        next = next->getRightChild();
+                    }
+                } else {
+                    next = levelToRemove->getParent();
+                }
+                setBestBid(next);
+            }
             buyTree->remove(levelToRemove);
             buyPriceLevelMap.erase(it);
             delete levelToRemove;

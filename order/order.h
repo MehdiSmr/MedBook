@@ -24,12 +24,18 @@ public:
     std::int32_t getRemaining() const;
     std::int32_t getPrice() const;
     Side getSide() const;
+    Order* getNext() const; 
+    Order* getPrev() const;
+    PriceLevel* getLevel() const;
+
+private:
+    // Only the book changes quantities and only PriceLevel changes links,
+    // so outside code can't break the book's invariants.
+    friend class OrderBook;
+    friend class PriceLevel;
     void setQuantity(std::int32_t newQuantity);
     void reduceRemaining(std::int32_t amount);
-    Order* getNext() const; 
     void setNext(Order* nextOrder); 
-    Order* getPrev() const;
     void setPrev(Order* prevOrder);
-    PriceLevel* getLevel() const;
     void setLevel(PriceLevel* level); 
 };

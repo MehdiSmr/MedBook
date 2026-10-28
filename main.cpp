@@ -1,7 +1,6 @@
 #include <iostream>
 #include "order_book/order_book.h"
 int main() {
-    OrderBook* orderBook = new OrderBook();
-    std::cout << sizeof(orderBook) << std::endl;
+    std::cout << sizeof(OrderBook) << std::endl;
     return 0;
 }

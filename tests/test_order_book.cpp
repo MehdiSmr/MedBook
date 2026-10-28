@@ -369,3 +369,83 @@ TEST(OrderBook, RandomOperationsMatchReferenceModel) {
         EXPECT_EQ(ord->getSide(), o.side);
     }
 }
+
+// ---------- ids handed out separately ----------
+
+TEST(OrderBook, NextOrderIdThenAddUsesThatId) {
+    OrderBook book(16);
+    std::uint64_t id = book.nextOrderId();
+    EXPECT_EQ(book.addOrder(id, 10, 100, Side::BUY), id);
+    ASSERT_NE(book.getOrder(id), nullptr);
+    EXPECT_EQ(add(book, Side::BUY, 100), id + 1) << "the counter is shared by both add paths";
+}
+
+TEST(OrderBook, AddWithIdInUseThrows) {
+    OrderBook book(16);
+    std::uint64_t id = add(book, Side::BUY, 100);
+    EXPECT_THROW(book.addOrder(id, 5, 101, Side::BUY), std::invalid_argument);
+    EXPECT_EQ(book.getOrder(id)->getPrice(), 100);
+}
+
+TEST(OrderBook, AddWithIdNotHandedOutThrows) {
+    OrderBook book(16);
+    EXPECT_THROW(book.addOrder(std::uint64_t{0}, 5, 100, Side::BUY), std::invalid_argument);
+    EXPECT_THROW(book.addOrder(std::uint64_t{7}, 5, 100, Side::BUY), std::invalid_argument);
+    EXPECT_EQ(book.getBestBid(), nullptr);
+}
+
+// ---------- fill ----------
+
+TEST(OrderBook, PartialFillReducesRemainingAndKeepsPriority) {
+    OrderBook book(16);
+    std::uint64_t a = add(book, Side::SELL, 100, 10);
+    std::uint64_t b = add(book, Side::SELL, 100, 10);
+    book.fillOrder(a, 3);
+    EXPECT_EQ(book.getOrder(a)->getRemaining(), 7);
+    EXPECT_EQ(book.getOrder(a)->getQuantity(), 10) << "original quantity must not change on a fill";
+    EXPECT_EQ(queueOf(book, a), (std::vector<std::uint64_t>{a, b}));
+}
+
+TEST(OrderBook, FullFillRemovesOrderAndEmptyLevel) {
+    OrderBook book(16);
+    std::uint64_t a = add(book, Side::SELL, 100, 10);
+    std::uint64_t b = add(book, Side::SELL, 101, 10);
+    book.fillOrder(a, 4);
+    book.fillOrder(a, 6);
+    EXPECT_EQ(book.getOrder(a), nullptr);
+    ASSERT_NE(book.getBestAsk(), nullptr);
+    EXPECT_EQ(book.getBestAsk()->getPrice(), 101) << "the emptied level must be gone";
+    book.fillOrder(b, 10);
+    EXPECT_EQ(book.getBestAsk(), nullptr);
+}
+
+TEST(OrderBook, FullFillFreesPoolSlot) {
+    OrderBook book(1);
+    std::uint64_t a = add(book, Side::BUY, 100, 5);
+    book.fillOrder(a, 5);
+    EXPECT_NO_THROW(add(book, Side::BUY, 100, 5)) << "a pool of 1 needs the slot back";
+}
+
+TEST(OrderBook, OverfillThrowsAndLeavesOrderUnchanged) {
+    OrderBook book(16);
+    std::uint64_t a = add(book, Side::BUY, 100, 10);
+    book.fillOrder(a, 4);
+    EXPECT_THROW(book.fillOrder(a, 7), std::invalid_argument);
+    EXPECT_EQ(book.getOrder(a)->getRemaining(), 6);
+}
+
+TEST(OrderBook, FillUnknownOrNonPositiveThrows) {
+    OrderBook book(16);
+    std::uint64_t a = add(book, Side::BUY, 100, 10);
+    EXPECT_THROW(book.fillOrder(a + 99, 1), std::invalid_argument);
+    EXPECT_THROW(book.fillOrder(a, 0), std::invalid_argument);
+    EXPECT_THROW(book.fillOrder(a, -2), std::invalid_argument);
+    EXPECT_EQ(book.getOrder(a)->getRemaining(), 10);
+}
+
+TEST(OrderBook, PartiallyFilledOrderCannotBeModified) {
+    OrderBook book(16);
+    std::uint64_t a = add(book, Side::BUY, 100, 10);
+    book.fillOrder(a, 3);
+    EXPECT_THROW(book.modifyOrder(a, 5, 100), std::invalid_argument);
+}

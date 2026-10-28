@@ -20,6 +20,7 @@ add_library(medbook_core STATIC
     price_level/price_level.cpp
     order_pool/order_pool.cpp
     order_book/order_book.cpp
+    matching_engine/matching_engine.cpp
 )
 target_include_directories(medbook_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
@@ -44,7 +45,7 @@ if(MEDBOOK_BUILD_TESTS)
     enable_testing()
     include(GoogleTest)
 
-    foreach(name test_order test_price_level test_order_pool test_red_black_tree test_order_book)
+    foreach(name test_order test_price_level test_order_pool test_red_black_tree test_order_book test_matching_engine)
         add_executable(${name} tests/${name}.cpp)
         target_link_libraries(${name} PRIVATE medbook_core GTest::gtest_main)
         gtest_discover_tests(${name})
